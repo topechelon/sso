@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/pem"
+	"errors"
 	"fmt"
 	"hash"
 	"io/ioutil"
@@ -200,4 +201,77 @@ func removeEmpty(s []string) []string {
 		}
 	}
 	return r
+}
+
+// RequestVerifier exposes an interface for digitally verifying the signed requests
+// See comments for the Verify() method below, for more on how this signature is verified.
+type RequestVerifier struct {
+	publicKey   *rsa.PublicKey
+	publicKeyID string
+}
+
+func NewRequestVerifier(publicKey []byte) (*RequestVerifier, error) {
+	var keyHash []byte
+	hasher := sha256.New()
+	_, _ = hasher.Write(publicKey)
+	keyHash = hasher.Sum(keyHash)
+
+	// And build the rsa.PublicKey object that will help verify the signature.
+	block, _ := pem.Decode(publicKey)
+
+	key, err := x509.ParsePKCS1PublicKey(block.Bytes)
+	if err != nil {
+		return nil, err
+	}
+
+	return &RequestVerifier{
+		publicKey:   key,
+		publicKeyID: hex.EncodeToString(keyHash),
+	}, nil
+}
+
+// Verify checks the signing key header, `kid` ensuring it is present and matches the expected public key id.
+// Verify also ensures the signature header `Sso-Signature` is present and verifies the signature value matches
+// the rsa siganture using the same document representation defined in `Sign()` using rsa.VerifyPKCS1v15
+func (v *RequestVerifier) Verify(req *http.Request) error {
+	// verify that the signing-key header is the hash of the public-key.
+	kid := req.Header.Get(signingKeyHeader)
+	if kid == "" {
+		return fmt.Errorf("missing header: %q", signingKeyHeader)
+	}
+
+	if kid != v.publicKeyID {
+		return errors.New("public key id does not match")
+	}
+
+	base64Signature := req.Header.Get(signatureHeader)
+	if base64Signature == "" {
+		return fmt.Errorf("missing header: %q", signatureHeader)
+	}
+
+	sig, err := base64.URLEncoding.DecodeString(base64Signature)
+	if err != nil {
+		return err
+	}
+
+	repr, err := mapRequestToHashInput(req)
+	if err != nil {
+		return fmt.Errorf("could not generate representation for request: %s", err)
+	}
+
+	// Generate hash of the document buffer.
+	var documentHash []byte
+	hasher := sha256.New()
+	_, err = hasher.Write([]byte(repr))
+	if err != nil {
+		return err
+	}
+	documentHash = hasher.Sum(documentHash)
+
+	err = rsa.VerifyPKCS1v15(v.publicKey, crypto.SHA256, documentHash, sig)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

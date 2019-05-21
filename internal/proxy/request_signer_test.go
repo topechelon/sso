@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"bytes"
 	"crypto"
 	"crypto/rsa"
 	"crypto/sha256"
@@ -9,8 +10,12 @@ import (
 	"encoding/hex"
 	"encoding/pem"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
+	"net/http/httptest"
+	"net/http/httputil"
+	"net/url"
 	"strings"
 	"testing"
 
@@ -177,4 +182,249 @@ func TestSignatureRoundTripDecoding(t *testing.T) {
 	_, _ = hasher.Write(publicKey)
 	pubKeyHash = hasher.Sum(pubKeyHash)
 	testutil.Equal(t, hex.EncodeToString(pubKeyHash), req.Header.Get("kid"))
+}
+
+func genRequestSignerVerifier(t *testing.T) (*RequestSigner, *RequestVerifier) {
+	privateKey, err := ioutil.ReadFile("testdata/private_key.pem")
+	if err != nil {
+		t.Fatalf("could not read private key from testdata: %v", err)
+	}
+
+	// Build the RequestSigner object used to generate the request signature header.
+	requestSigner, err := NewRequestSigner(string(privateKey))
+	if err != nil {
+		t.Fatalf("could not create request signer: %v", err)
+	}
+
+	publicKey, err := ioutil.ReadFile("testdata/public_key.pub")
+	if err != nil {
+		t.Fatalf("could not public key form testdata: %v", err)
+	}
+
+	requestVerifier, err := NewRequestVerifier(publicKey)
+	if err != nil {
+		t.Fatalf("could not create request verifier: %v", err)
+	}
+
+	return requestSigner, requestVerifier
+}
+
+func TestRequestBodySignatures(t *testing.T) {
+	// this is particularly problematic utf8 string
+	badUTFBytes, err := hex.DecodeString("efbfbeefbfbfedafbfedbfbf")
+	if err != nil {
+		t.Fatalf("unexpected error decoding hex string: %v", err)
+	}
+
+	testCases := map[string]struct {
+		Method  string
+		Headers http.Header
+		Body    io.Reader
+	}{
+		"get nil request body": {
+			Method: "GET",
+			Headers: map[string][]string{
+				"X-Forwarded-User":   []string{"any.user"},
+				"X-Forwarded-Email":  []string{"any.user@domain.com"},
+				"X-Forwarded-Groups": []string{"org1", "div1"},
+			},
+			Body: nil,
+		},
+		"post with string request body": {
+			Method: "POST",
+			Headers: map[string][]string{
+				"X-Forwarded-User":   []string{"any.user"},
+				"X-Forwarded-Email":  []string{"any.user@domain.com"},
+				"X-Forwarded-Groups": []string{"org1", "div1"},
+			},
+			Body: strings.NewReader("something or\nother"),
+		},
+		"post with emoji body": {
+			Method: "POST",
+			Headers: map[string][]string{
+				"X-Forwarded-User":   []string{"any.user"},
+				"X-Forwarded-Email":  []string{"any.user@domain.com"},
+				"X-Forwarded-Groups": []string{"org1", "div1"},
+			},
+			Body: bytes.NewBuffer([]byte("😅")),
+		},
+		"post with non-utf 8 string": {
+			Method: "POST",
+			Headers: map[string][]string{
+				"X-Forwarded-User":   []string{"any.user"},
+				"X-Forwarded-Email":  []string{"any.user@domain.com"},
+				"X-Forwarded-Groups": []string{"org1", "div1"},
+			},
+			Body: bytes.NewBuffer(badUTFBytes),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			signer, verifier := genRequestSignerVerifier(t)
+
+			backend := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+				// verify the request on the server
+				err := verifier.Verify(req)
+				if err != nil {
+					t.Fatalf("unexpected error verifying signature: %v", err)
+				}
+				rw.WriteHeader(http.StatusOK)
+			}))
+			defer backend.Close()
+			backendURL, err := url.Parse(backend.URL)
+			if err != nil {
+				t.Fatalf("unexpected error parsing backend url: %v", err)
+			}
+
+			frontend := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+				for key, vals := range tc.Headers {
+					for _, val := range vals {
+						req.Header.Add(key, val)
+					}
+				}
+
+				err := signer.Sign(req)
+				if err != nil {
+					t.Fatalf("unexpected error signing request: %v", err)
+				}
+
+				reverseProxy := httputil.NewSingleHostReverseProxy(backendURL)
+				reverseProxy.ServeHTTP(rw, req)
+			}))
+			defer frontend.Close()
+
+			// build the request to be signed.
+			req, err := http.NewRequest(tc.Method, frontend.URL, tc.Body)
+			if err != nil {
+				t.Fatalf("could not construct http request: %v", err)
+			}
+
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatalf("got unexpected error doing http request: %v", err)
+			}
+
+			if resp.StatusCode != http.StatusOK {
+				t.Logf("have: %v", resp.StatusCode)
+				t.Logf("want: %v", http.StatusOK)
+				t.Fatalf("got unexpected status code")
+			}
+		})
+	}
+}
+
+func TestRequestBodySignaturesFromDirector(t *testing.T) {
+	// this is particularly problematic utf8 string
+	badUTFBytes, err := hex.DecodeString("efbfbeefbfbfedafbfedbfbf")
+	if err != nil {
+		t.Fatalf("unexpected error decoding hex string: %v", err)
+	}
+
+	testCases := map[string]struct {
+		Method  string
+		Headers http.Header
+		Body    io.Reader
+	}{
+		"get nil request body": {
+			Method: "GET",
+			Headers: map[string][]string{
+				"X-Forwarded-User":   []string{"any.user"},
+				"X-Forwarded-Email":  []string{"any.user@domain.com"},
+				"X-Forwarded-Groups": []string{"org1", "div1"},
+			},
+			Body: nil,
+		},
+		"post with string request body": {
+			Method: "POST",
+			Headers: map[string][]string{
+				"X-Forwarded-User":   []string{"any.user"},
+				"X-Forwarded-Email":  []string{"any.user@domain.com"},
+				"X-Forwarded-Groups": []string{"org1", "div1"},
+			},
+			Body: strings.NewReader("something or\nother"),
+		},
+		"post with emoji body": {
+			Method: "POST",
+			Headers: map[string][]string{
+				"X-Forwarded-User":   []string{"any.user"},
+				"X-Forwarded-Email":  []string{"any.user@domain.com"},
+				"X-Forwarded-Groups": []string{"org1", "div1"},
+			},
+			Body: bytes.NewBuffer([]byte("😅")),
+		},
+		"post with non-utf 8 string": {
+			Method: "POST",
+			Headers: map[string][]string{
+				"X-Forwarded-User":   []string{"any.user"},
+				"X-Forwarded-Email":  []string{"any.user@domain.com"},
+				"X-Forwarded-Groups": []string{"org1", "div1"},
+			},
+			Body: bytes.NewBuffer(badUTFBytes),
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			signer, verifier := genRequestSignerVerifier(t)
+
+			backend := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+				// verify the request on the server
+				err := verifier.Verify(req)
+				if err != nil {
+					t.Fatalf("unexpected error verifying signature: %v", err)
+				}
+				rw.WriteHeader(http.StatusOK)
+			}))
+			defer backend.Close()
+			backendURL, err := url.Parse(backend.URL)
+			if err != nil {
+				t.Fatalf("unexpected error parsing backend url: %v", err)
+			}
+
+			frontend := httptest.NewServer(http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+				for key, vals := range tc.Headers {
+					for _, val := range vals {
+						req.Header.Add(key, val)
+					}
+				}
+
+				reverseProxy := httputil.NewSingleHostReverseProxy(backendURL)
+
+				// save pointer to old director
+				director := reverseProxy.Director
+				reverseProxy.Director = func(r *http.Request) {
+					// call older director
+					director(r)
+
+					// sign request
+					err := signer.Sign(r)
+					if err != nil {
+						t.Fatalf("unexpected error signing request: %v", err)
+					}
+				}
+
+				// proxy request
+				reverseProxy.ServeHTTP(rw, req)
+			}))
+			defer frontend.Close()
+
+			// build the request to be signed.
+			req, err := http.NewRequest(tc.Method, frontend.URL, tc.Body)
+			if err != nil {
+				t.Fatalf("could not construct http request: %v", err)
+			}
+
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				t.Fatalf("got unexpected error doing http request: %v", err)
+			}
+
+			if resp.StatusCode != http.StatusOK {
+				t.Logf("have: %v", resp.StatusCode)
+				t.Logf("want: %v", http.StatusOK)
+				t.Fatalf("got unexpected status code")
+			}
+		})
+	}
 }

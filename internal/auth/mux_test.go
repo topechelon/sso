@@ -46,14 +46,9 @@ func TestHostHeader(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.Name, func(t *testing.T) {
-			opts := testOpts(t, "abced", "testtest")
-			opts.Host = tc.Host
-			err := opts.Validate()
-			if err != nil {
-				t.Fatalf("unexpected opts error: %v", err)
-			}
-
-			authMux, err := NewAuthenticatorMux(opts, nil)
+			config := testConfiguration(t)
+			config.ServerConfig.Host = tc.Host
+			authMux, err := NewAuthenticatorMux(config, nil)
 			if err != nil {
 				t.Fatalf("unexpected err creating auth mux: %v", err)
 			}

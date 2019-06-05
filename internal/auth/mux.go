@@ -17,36 +17,39 @@ type AuthenticatorMux struct {
 	authenticators []*Authenticator
 }
 
-func NewAuthenticatorMux(opts *Options, statsdClient *statsd.Client) (*AuthenticatorMux, error) {
+func NewAuthenticatorMux(config Configuration, statsdClient *statsd.Client) (*AuthenticatorMux, error) {
 	logger := log.NewLogEntry()
 
 	emailValidator := func(p *Authenticator) error {
-		if len(opts.EmailAddresses) != 0 {
-			p.Validator = options.NewEmailAddressValidator(opts.EmailAddresses)
+		if len(config.AuthorizeConfig.EmailAddresses) != 0 {
+			p.Validator = options.NewEmailAddressValidator(config.AuthorizeConfig.EmailAddresses)
 		} else {
-			p.Validator = options.NewEmailDomainValidator(opts.EmailDomains)
+			p.Validator = options.NewEmailDomainValidator(config.AuthorizeConfig.EmailDomains)
 		}
 		return nil
 	}
 
-	// one day, we will contruct more providers here
-	idp, err := newProvider(opts)
-	if err != nil {
-		logger.Error(err, "error creating new Identity Provider")
-		return nil, err
+	identityProviders := []providers.Provider{}
+	for slug, providerConfig := range config.ProviderConfigs {
+		idp, err := newProvider(providerConfig)
+		if err != nil {
+			logger.Error(err, fmt.Sprintf("error creating provider.%s", slug))
+			return nil, err
+		}
+		identityProviders = append(identityProviders, idp)
 	}
-	identityProviders := []providers.Provider{idp}
-	authenticators := []*Authenticator{}
 
+	authenticators := []*Authenticator{}
 	idpMux := http.NewServeMux()
+
 	for _, idp := range identityProviders {
 		idpSlug := idp.Data().ProviderSlug
-		authenticator, err := NewAuthenticator(opts,
+		authenticator, err := NewAuthenticator(config,
 			emailValidator,
 			SetProvider(idp),
-			SetCookieStore(opts, idpSlug),
+			SetCookieStore(config, idpSlug),
 			SetStatsdClient(statsdClient),
-			SetRedirectURL(opts, idpSlug),
+			SetRedirectURL(idpSlug),
 		)
 		if err != nil {
 			logger.Error(err, "error creating new Authenticator")
@@ -70,7 +73,7 @@ func NewAuthenticatorMux(opts *Options, statsdClient *statsd.Client) (*Authentic
 	idpMux.Handle("/static/", http.StripPrefix("/static/", fsHandler))
 
 	hostRouter := hostmux.NewRouter()
-	hostRouter.HandleStatic(opts.Host, idpMux)
+	hostRouter.HandleStatic(config.ServerConfig.Host, idpMux)
 
 	healthcheckHandler := setHealthCheck("/ping", hostRouter)
 

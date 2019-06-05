@@ -49,9 +49,13 @@ func TestWithMethods(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			req := httptest.NewRequest(tc.requestMethod, "/test", nil)
 			rw := httptest.NewRecorder()
-			options := testOpts(t, "clientId", "clientSecret")
-			options.Validate()
-			p, _ := NewAuthenticator(options)
+
+			config := testConfiguration(t)
+			p, err := NewAuthenticator(config)
+			if err != nil {
+				t.Fatalf("unexpected err creating authenticator: %v", err)
+			}
+
 			p.withMethods(createTestHandler(), tc.acceptedMethods...)(rw, req)
 			resp := rw.Result()
 			if resp.StatusCode != tc.expectedCode {
@@ -120,9 +124,13 @@ func TestValidateClientID(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			options := testOpts(t, tc.expectedClientID, "secret")
-			options.Validate()
-			p, _ := NewAuthenticator(options)
+			config := testConfiguration(t)
+			config.ClientConfig.ClientID = tc.expectedClientID
+			p, err := NewAuthenticator(config)
+			if err != nil {
+				t.Fatalf("unexpected err creating authenticator: %v", err)
+			}
+
 			params := url.Values{}
 			if tc.requestBodyClientID != "" {
 				params.Add("client_id", tc.requestBodyClientID)
@@ -203,9 +211,13 @@ func TestValidateClientSecret(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			options := testOpts(t, "clientId", tc.expectedClientSecret)
-			options.Validate()
-			p, _ := NewAuthenticator(options)
+			config := testConfiguration(t)
+			config.ClientConfig.ClientSecret = tc.expectedClientSecret
+			p, err := NewAuthenticator(config)
+			if err != nil {
+				t.Fatalf("unexpected err creating authenticator: %v", err)
+			}
+
 			params := url.Values{}
 			if tc.clientSecretBody != "" {
 				params.Add("client_secret", tc.clientSecretBody)
@@ -277,10 +289,13 @@ func TestValidateRedirectURI(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			options := testOpts(t, "clientId", "clientSecret")
-			options.ProxyRootDomains = []string{"example.com", "example.io"}
-			options.Validate()
-			p, _ := NewAuthenticator(options)
+			config := testConfiguration(t)
+			config.AuthorizeConfig.ProxyRootDomains = []string{"example.com", "example.io"}
+			p, err := NewAuthenticator(config)
+			if err != nil {
+				t.Fatalf("unexpected err creating authenticator: %v", err)
+			}
+
 			params := url.Values{}
 			if tc.redirectURI != "" {
 				params.Add("redirect_uri", tc.redirectURI)
@@ -288,6 +303,7 @@ func TestValidateRedirectURI(t *testing.T) {
 			req := httptest.NewRequest("POST", "/test", bytes.NewBufferString(params.Encode()))
 			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 			rw := httptest.NewRecorder()
+
 			p.validateRedirectURI(createTestHandler())(rw, req)
 			resp := rw.Result()
 			if resp.StatusCode != tc.expectedStatusCode {
@@ -393,10 +409,12 @@ func TestValidateSignature(t *testing.T) {
 	}
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			options := testOpts(t, "clientId", tc.request.secret)
-			options.ProxyRootDomains = []string{"example.com", "example.io"}
-			options.Validate()
-			p, _ := NewAuthenticator(options)
+			config := testConfiguration(t)
+			config.ClientConfig.ClientSecret = tc.request.secret
+			p, err := NewAuthenticator(config)
+			if err != nil {
+				t.Fatalf("unexpected err creating authenticator: %v", err)
+			}
 			params := url.Values{}
 			params.Add("redirect_uri", tc.request.redirectURI)
 			params.Add("ts", fmt.Sprint(tc.request.timestamp.Unix()))

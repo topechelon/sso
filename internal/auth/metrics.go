@@ -66,6 +66,6 @@ func logRequestMetrics(proxyHost string, req *http.Request, requestDuration time
 	}
 
 	// TODO: eventually make rates configurable
-	StatsdClient.Timing("request", requestDuration, tags, 1.0)
+	StatsdClient.Timing("request.time", requestDuration, tags, 1.0)
 
 }

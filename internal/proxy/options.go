@@ -104,7 +104,6 @@ type Options struct {
 
 	// internal values that are set after config validation
 	upstreamConfigs     []*UpstreamConfig
-	provider            providers.Provider
 	decodedCookieSecret []byte
 }
 
@@ -183,6 +182,7 @@ func (o *Options) Validate() error {
 			Timeout:       o.DefaultUpstreamTimeout,
 			ResetDeadline: o.DefaultUpstreamTCPResetDeadline,
 			CookieName:    o.CookieName,
+			ProviderSlug:  o.ProviderSlug,
 		}
 
 		o.upstreamConfigs, err = loadServiceConfigs(rawBytes, o.Cluster, o.Scheme, templateVars, defaultUpstreamOptionsConfig)
@@ -237,12 +237,12 @@ func parseProviderInfo(o *Options) error {
 	if err != nil {
 		return err
 	}
+
 	if providerURL.Scheme == "" || providerURL.Host == "" {
 		return errors.New("provider-url must include scheme and host")
 	}
 
 	var providerURLInternal *url.URL
-
 	if o.ProviderURLInternalString != "" {
 		providerURLInternal, err = url.Parse(o.ProviderURLInternalString)
 		if err != nil {
@@ -253,22 +253,37 @@ func parseProviderInfo(o *Options) error {
 		}
 	}
 
-	providerData := &providers.ProviderData{
-		ClientID:            o.ClientID,
-		ClientSecret:        o.ClientSecret,
-		ProviderURL:         providerURL,
-		ProviderURLInternal: providerURLInternal,
-		ProviderSlug:        o.ProviderSlug,
-		Scope:               o.Scope,
-		SessionLifetimeTTL:  o.SessionLifetimeTTL,
-		SessionValidTTL:     o.SessionValidTTL,
-		GracePeriodTTL:      o.GracePeriodTTL,
+	return nil
+}
+
+func newProvider(opts *Options, upstreamConfig *UpstreamConfig) (providers.Provider, error) {
+	providerURL, err := url.Parse(opts.ProviderURLString)
+	if err != nil {
+		return nil, err
 	}
 
-	p := providers.New(o.Provider, providerData, o.StatsdClient)
-	o.provider = providers.NewSingleFlightProvider(p, o.StatsdClient)
+	var providerURLInternal *url.URL
+	if opts.ProviderURLInternalString != "" {
+		providerURLInternal, err = url.Parse(opts.ProviderURLInternalString)
+		if err != nil {
+			return nil, err
+		}
+	}
 
-	return nil
+	providerData := &providers.ProviderData{
+		ClientID:            opts.ClientID,
+		ClientSecret:        opts.ClientSecret,
+		ProviderURL:         providerURL,
+		ProviderURLInternal: providerURLInternal,
+		ProviderSlug:        upstreamConfig.ProviderSlug,
+		Scope:               opts.Scope,
+		SessionLifetimeTTL:  opts.SessionLifetimeTTL,
+		SessionValidTTL:     opts.SessionValidTTL,
+		GracePeriodTTL:      opts.GracePeriodTTL,
+	}
+
+	p := providers.New(opts.Provider, providerData, opts.StatsdClient)
+	return providers.NewSingleFlightProvider(p, opts.StatsdClient), nil
 }
 
 func validateCookieName(o *Options, msgs []string) []string {

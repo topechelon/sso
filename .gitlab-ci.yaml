@@ -1,0 +1,45 @@
+# include pipeline templates
+include:
+  - project: devops/standard-pipeline-templates
+    ref: sandbox
+    file: index.yml
+
+variables:
+  # ENABLE/DISABLE STAGES #
+  CONTAINER_BUILD:             "disable"
+  HELM_DEPLOY:                 "enable"
+  STANDARD_HELM_CHART_VERSION: 1.1.40
+
+  # GLOBAL (ALL JOBS/ENVIRONMENTS) #
+  IMAGE_PATH:                   ""
+  EXTRA_BUILD_FLAGS:            ""
+
+#########
+# BUILD #
+#########
+# build:main:
+#   extends: container-build-commit
+#   rules:
+#     - if: '$CI_MERGE_REQUEST_ID && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "devops"'
+#   variables:
+#     IMAGE_PATH: sso
+
+###########
+# STAGING #
+###########
+
+deploy-stg:sso:
+  extends: .helm-deploy-dev
+  environment: stg
+  variables:
+    SERVICE_NAME: sso-proxy
+    DEPLOY_NAMESPACE: tes-staging
+    VALUES_PATH: values/values.yaml
+    IMAGE_PATH: "public.ecr.aws/topechelon/sso"
+    DEPLOY_IMAGE_TAG: "v1.2.0"
+    K8S_API: $STAGING_K8S_API_URL
+    K8S_CA: $STAGING_K8S_CA_BASE64
+    K8S_TOKEN: $STAGING_K8S_TOKEN_BASE64
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "devops"'
+    - when: manual

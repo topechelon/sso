@@ -1,0 +1,209 @@
+#########################################################
+# Define the main deployment of the app
+#########################################################
+
+fullnameOverride: "sso-proxy"
+
+# Image and any required credentials to download it for the default deployment
+image: 
+  image: "public.ecr.aws/topechelon/sso:v1.2.0"
+  pullPolicy: Always
+  credentials:
+    create: false
+    username: ""
+    password: ""
+    secretRef: ""
+
+# Default security context
+securityContext:
+  allowPrivilegeEscalation: true
+  runAsNonRoot: false
+  privileged: true
+  capabilities:
+    drop: ["ALL"]
+  runAsGroup: 0
+  runAsUser: 0
+
+podSecurityContext:
+  fsGroup: 0
+  seccompProfile:
+    type: RuntimeDefault
+
+# Specify image pull secrets if required or if you have it creating registry credentials
+# imagePullSecrets: 
+# - name: Release.name--registry-secret
+
+# Enable deployment - by default we enable a simple deployment
+deployment: 
+  enabled: true
+  command: "sso-proxy"
+  args: []
+
+# Configure the number of pods for this service.  If autoscale is enabled, replica count is not used.
+replicaCount: 1
+autoscale:
+  enabled: false
+  minPods: 2
+  maxPods: 4
+  cpuAverageUtilizationThreshold: 70
+
+# Configure PodDisruptionBudget
+podDisruptionBudget:
+  enabled: false
+
+# Enable and configure a service
+service:
+  enabled: true
+  type: ClusterIP
+  port: 4180
+
+# Configure resources it will be given
+resources:
+ limits:
+   cpu: "200m"
+   memory: "256Mi"
+ requests:
+   cpu: "20m"
+   memory: "256Mi"
+
+# pod liveness and readiness probes to check the applications health
+# https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-probes/
+livenessProbe: {}
+  # httpGet:
+  #   path: /health
+  #   port: 8080
+  #   httpHeaders:
+  #   - name: Custom-Header
+  #     value: Awesome
+  # initialDelaySeconds: 3
+  # periodSeconds: 3
+
+readinessProbe:
+  failureThreshold: 3
+  httpGet:
+    path: /ping
+    port: 4180
+    scheme: HTTP
+  periodSeconds: 10
+  successThreshold: 1
+  timeoutSeconds: 1
+
+# Configure vault agent init container to pull secrets from vault
+vaultAgent:
+  enabled: false
+  clusterName: "tes-dev-us-east-1"
+  namespace: "tes-staging"
+  role: "tes-staging"
+  secrets:
+    - type: env
+      secretName: teapi
+      filename: config
+
+
+# List key/value pairs to be included in this service's ConfigMap
+configData:
+  CLUSTER: topechelon
+  COOKIE_SECURE: "true"
+  DEFAULT_UPSTREAM_TIMEOUT: 119s
+  EMAIL_DOMAIN: topechelon.com,gmail.com
+  PROVIDER_URL: https://sso-oauth.tes-staging.topechelon.com
+  SCHEME: https
+  STATSD_HOST: localhost
+  STATSD_PORT: "11111"
+  TCP_READ_TIMEOUT: 120s
+  TCP_WRITE_TIMEOUT: 120s
+  UPSTREAM_CONFIGS: /sso/upstream_configs.yml
+
+# Set secret data key-value pairs that will be loaded into env variables
+secretData: {}
+
+# List of files to load into configmaps.  Supports glob patterns, all files that match will be put into the configmap
+configFiles: []
+  # - fileGlob: files/config.toml
+  #   configMapName: config.toml
+
+# List of extra annotations to be injected into this service's ConfigMap
+configExtraAnnotations: {}
+
+# List of extra annotations to be injected into pod templates
+extraAnnotations: {}
+
+# See https://kubernetes.io/docs/concepts/storage/volumes/
+volumes: []
+  # - name: mydir
+  #   hostPath:
+  #     # Ensure the file directory is created.
+  #     path: /var/local/aaa
+  #     type: DirectoryOrCreate
+
+volumeMounts: []
+  # - name: myvolume
+  #   mountPath: /mount
+
+# See https://kubernetes.io/docs/concepts/storage/persistent-volumes/
+persistentVolumeClaims:
+  # - name: efs
+  #   accessMode: ReadWriteMany
+  #   storageClass: efs-cats-prod
+  #   size: 50Gi
+
+# Possibly select a certain type of node
+nodeSelector: {}
+
+# Set tolerations
+tolerations: []
+
+# Set pod affinity
+affinity: {}
+
+# sets whether containers get the kubernetes generated env vars for addresses to other services in the same namespace
+enableServiceLinks: true
+
+###########
+# Ingress #
+###########
+
+# Deploys a Kubernetes Ingress resource, defaults to nginx ingress controller.
+# If networking.k8s.io/v1 is available in your cluster that will be used,
+# otherwise fall back to networking.k8s.io/v1
+k8sIngress:
+  enabled: false
+  hosts: []
+    # Add lists of hosts
+    # - example.local
+    #- "localhost"
+  path: /
+  annotations:
+    # kubernetes.io/ingress.class: gce
+    kubernetes.io/ingress.class: nginx
+    # nginx.ingress.kubernetes.io/ssl-redirect: "false"
+    # kubernetes.io/ingress.allow-http: false
+    # kubernetes.io/tls-acme: true
+  tls: []
+    # Secrets must be manually created in the namespace.
+    # - secretName: dash-certificate
+    #   hosts:
+    #     - example.local
+
+# Deploys an Istio VirtualService and DestinationRule
+istio:
+  enabled: false
+  gateways: []
+  hosts: []
+  paths: []
+  loadBalancerType: ROUND_ROBIN
+  useCustomLoadBalancer: false
+  customLoadBalancer: {}
+    # consistentHash:
+    #   httpCookie:
+    #     name: my_cookie_name
+    #     ttl: 300s
+  mtls:
+    enabled: false
+  # optional blocking for certain hosts or host/path combinations.  any matches here will return a 404
+  blocked:
+    enabled: false
+    gateways: []
+    hosts: []
+    paths: []
+

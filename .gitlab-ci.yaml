@@ -43,3 +43,4 @@ deploy-stg:sso:
   rules:
     - if: '$CI_COMMIT_REF_NAME == "devops"'
     - when: manual
+

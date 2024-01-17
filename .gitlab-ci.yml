@@ -1,14 +1,14 @@
 # include pipeline templates
 include:
   - project: devops/standard-pipeline-templates
-    ref: sandbox
+    ref: main
     file: index.yml
 
 variables:
   # ENABLE/DISABLE STAGES #
   CONTAINER_BUILD:             "disable"
   HELM_DEPLOY:                 "enable"
-  STANDARD_HELM_CHART_VERSION: 1.1.40
+  STANDARD_HELM_CHART_VERSION: 1.0.32
 
   # GLOBAL (ALL JOBS/ENVIRONMENTS) #
   IMAGE_PATH:                   ""

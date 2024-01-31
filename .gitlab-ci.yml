@@ -40,6 +40,8 @@ deploy-stg:sso:
     K8S_API: $STAGING_K8S_API_URL
     K8S_CA: $STAGING_K8S_CA_BASE64
     K8S_TOKEN: $STAGING_K8S_TOKEN_BASE64
+    EXTRA_HELM_FLAGS: |
+      --set-string image.image=${IMAGE_PATH}:${DEPLOY_IMAGE_TAG}
   rules:
     - if: '$CI_COMMIT_REF_NAME == "devops"'
     - when: manual

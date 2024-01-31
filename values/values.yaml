@@ -94,7 +94,7 @@ readinessProbe:
 
 # Configure vault agent init container to pull secrets from vault
 vaultAgent:
-  enabled: false
+  enabled: true
   clusterName: "tes-dev-us-east-1"
   namespace: "tes-staging"
   role: "tes-staging"

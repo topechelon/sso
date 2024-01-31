@@ -36,8 +36,12 @@ podSecurityContext:
 # Enable deployment - by default we enable a simple deployment
 deployment: 
   enabled: true
-  command: "sso-proxy"
-  args: []
+  command: "bash"
+  args:
+    - -c
+    - |
+      export $(xargs </vault/secrets/config);
+      sso-proxy
 
 # Configure the number of pods for this service.  If autoscale is enabled, replica count is not used.
 replicaCount: 1
@@ -96,7 +100,7 @@ vaultAgent:
   role: "tes-staging"
   secrets:
     - type: env
-      secretName: teapi
+      secretName: sso
       filename: config
 
 
@@ -118,9 +122,9 @@ configData:
 secretData: {}
 
 # List of files to load into configmaps.  Supports glob patterns, all files that match will be put into the configmap
-configFiles: []
-  # - fileGlob: files/config.toml
-  #   configMapName: config.toml
+configFiles:
+  - fileGlob: ./files/upstream_configs.yml
+    configMapName: sso-proxy-upstream-configs
 
 # List of extra annotations to be injected into this service's ConfigMap
 configExtraAnnotations: {}
@@ -129,16 +133,15 @@ configExtraAnnotations: {}
 extraAnnotations: {}
 
 # See https://kubernetes.io/docs/concepts/storage/volumes/
-volumes: []
-  # - name: mydir
-  #   hostPath:
-  #     # Ensure the file directory is created.
-  #     path: /var/local/aaa
-  #     type: DirectoryOrCreate
+volumes:
+  - configMap:
+      defaultMode: 420
+      name: sso-proxy-upstream-configs
+    name: upstream-configs
 
-volumeMounts: []
-  # - name: myvolume
-  #   mountPath: /mount
+volumeMounts:
+  - name: upstream-configs
+    mountPath: /sso
 
 # See https://kubernetes.io/docs/concepts/storage/persistent-volumes/
 persistentVolumeClaims:

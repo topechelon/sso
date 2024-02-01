@@ -216,3 +216,32 @@ istio:
     hosts: []
     paths: []
 
+#########################
+# Extra VirtualServices #
+#########################
+extraVirtualService:
+  enabled: true
+  virtualServices:
+  - name: bb3api-sso-proxy-redirect
+    gateways:
+    - istio-system/tes-staging-internal
+    hosts:
+    - bb3api.tes-staging.topechelon.com
+    paths:
+    - /oauth2
+    - /sidekiq_ui
+    loadBalancerType: ROUND_ROBIN
+    useCustomLoadBalancer: false
+    customLoadBalancer: {}
+      # consistentHash:
+      #   httpCookie:
+      #     name: my_cookie_name
+      #     ttl: 300s
+    mtls:
+      enabled: false
+    # optional blocking for certain hosts or host/path combinations.  any matches here will return a 404
+    blocked:
+      enabled: false
+      gateways: []
+      hosts: []
+      paths: []

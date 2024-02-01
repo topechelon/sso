@@ -103,9 +103,9 @@ configData: {}
 secretData: {}
 
 # List of files to load into configmaps.  Supports glob patterns, all files that match will be put into the configmap
-configFiles: []
-  # - fileGlob: files/config.toml
-  #   configMapName: config.toml
+configFiles:
+  - fileGlob: files/upstream.toml
+    configMapName: config.toml
 
 # List of extra annotations to be injected into this service's ConfigMap
 configExtraAnnotations: {}
@@ -377,3 +377,29 @@ extraServices:
   #         targetPort: 3888
   #     selector: 
   #       app: zookeeper
+
+#########################
+# Extra VirtualServices #
+#########################
+extraVirtualService:
+  enabled: false
+  virtualServices:
+  - name: something
+    gateways: []
+    hosts: []
+    paths: []
+    loadBalancerType: ROUND_ROBIN
+    useCustomLoadBalancer: false
+    customLoadBalancer: {}
+      # consistentHash:
+      #   httpCookie:
+      #     name: my_cookie_name
+      #     ttl: 300s
+    mtls:
+      enabled: false
+    # optional blocking for certain hosts or host/path combinations.  any matches here will return a 404
+    blocked:
+      enabled: false
+      gateways: []
+      hosts: []
+      paths: []

@@ -123,7 +123,7 @@ secretData: {}
 
 # List of files to load into configmaps.  Supports glob patterns, all files that match will be put into the configmap
 configFiles:
-  - fileGlob: ./files/upstream_configs.yml
+  - fileGlob: files/upstream_configs.yml
     configMapName: sso-proxy-upstream-configs
 
 # List of extra annotations to be injected into this service's ConfigMap
@@ -194,9 +194,8 @@ istio:
   gateways:
     - "istio-system/tes-staging-internal"
   hosts: 
-    - bb3apistaging.topechelon.com
+    - bb3api.tes-staging.topechelon.com
     - tam-mailhog.topechelon.com
-    - solr-dev.topechelon.com
     - kafka-ui-dev.topechelon.com
     - elk-dev.topechelon.com
   paths: 

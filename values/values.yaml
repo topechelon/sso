@@ -110,7 +110,7 @@ configData:
   COOKIE_SECURE: "true"
   DEFAULT_UPSTREAM_TIMEOUT: 119s
   EMAIL_DOMAIN: topechelon.com,gmail.com
-  PROVIDER_URL: https://sso-oauth.tes-staging.topechelon.com
+  PROVIDER_URL: https://sso-oauth.topechelon.com
   SCHEME: https
   STATSD_HOST: localhost
   STATSD_PORT: "11111"

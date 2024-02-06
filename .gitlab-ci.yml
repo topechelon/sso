@@ -34,12 +34,34 @@ deploy-stg:sso:
   variables:
     SERVICE_NAME: sso-proxy
     DEPLOY_NAMESPACE: tes-staging
-    VALUES_PATH: values/values.yaml
+    VALUES_PATH: values/values.stg.yaml
     IMAGE_PATH: "public.ecr.aws/topechelon/sso"
     DEPLOY_IMAGE_TAG: "v1.2.0"
     K8S_API: $STAGING_K8S_API_URL
     K8S_CA: $STAGING_K8S_CA_BASE64
     K8S_TOKEN: $STAGING_K8S_TOKEN_BASE64
+    HELM_PRE_UPDATE_HOOK: cp -r values/files standard-helm-chart/
+    EXTRA_HELM_FLAGS: |
+      --set-string image.image=${IMAGE_PATH}:${DEPLOY_IMAGE_TAG}
+  rules:
+    - if: '$CI_COMMIT_REF_NAME == "devops"'
+    - when: manual
+
+##############
+# Production #
+##############
+deploy-prd:sso:
+  extends: .helm-deploy-prod
+  environment: prod
+  variables:
+    SERVICE_NAME: sso-proxy
+    DEPLOY_NAMESPACE: bigbiller-prod
+    VALUES_PATH: values/values.yaml
+    IMAGE_PATH: "public.ecr.aws/topechelon/sso"
+    DEPLOY_IMAGE_TAG: "v1.2.0"
+    K8S_API: $PROD_K8S_API_URL
+    K8S_CA: $PROD_K8S_CA_BASE64
+    K8S_TOKEN: $PROD_K8S_TOKEN_BASE64
     HELM_PRE_UPDATE_HOOK: cp -r values/files standard-helm-chart/
     EXTRA_HELM_FLAGS: |
       --set-string image.image=${IMAGE_PATH}:${DEPLOY_IMAGE_TAG}

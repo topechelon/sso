@@ -1,0 +1,66 @@
+- service: solr
+  default:
+    from: solr.topechelon.com
+    to: http://bb3-solr.bb3-production.svc.cluster.local:8983
+    options:
+      allowed_groups:
+        - devs@topechelon.com
+        - supportstaff@topechelon.com
+- service: badger
+  default:
+    from: badger.topechelon.com
+    to: http://pgbadger.default.svc.cluster.local
+    options:
+      allowed_groups:
+        - devs@topechelon.com
+        - sysadmins@topechelon.com
+- service: elk
+  default:
+    from: elk.topechelon.com
+    to: https://vpc-bigbiller-72x7pnu5rccnni6gag5czpd5ny.us-east-1.es.amazonaws.com
+    options:
+      allowed_groups:
+        - devs@topechelon.com
+        - supportstaff@topechelon.com
+- service: sidekiq
+  default:
+    from: bb3api.topechelon.com
+    to: http://bb3-sidekiq.bb3-production:3000
+    options:
+      allowed_groups:
+        - devs@topechelon.com
+        - devs-contract@topechelon.com
+        - supportstaff@topechelon.com
+- service: kafka-ui
+  default:
+    from: kafka-ui.topechelon.com
+    to: http://kafka-ui.kafka
+    options:
+      allowed_groups:
+        - devs@topechelon.com
+        - sysadmins@topechelon.com
+- service: creditcard
+  default:
+    from: accounting.topechelon.com
+    to: http://creditcard.accounting
+    options:
+      allowed_groups:
+        - devs@topechelon.com
+        - sysadmins@topechelon.com
+- service: resourcespace
+  default:
+    from: resourcespace.topechelon.com
+    to: http://resourcespace.default
+    options:
+      allowed_groups:
+        - marketinggroup@topechelon.com
+        - oauth-resourcespace@topechelon.com
+- service: tenix
+  default:
+    from: tenix.topechelon.com
+    to: http://tenix-i.topechelon.com
+    options:
+      preserve_host: true
+      allowed_groups:
+        - oauth-tenix@topechelon.com
+        - sysadmins@topechelon.com

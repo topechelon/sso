@@ -57,7 +57,7 @@ deploy-prd:sso:
   variables:
     SERVICE_NAME: sso-proxy
     DEPLOY_NAMESPACE: bigbiller-prod
-    VALUES_PATH: values/values.yaml
+    VALUES_PATH: values/values.prd.yaml
     IMAGE_PATH: "public.ecr.aws/topechelon/sso"
     DEPLOY_IMAGE_TAG: "v1.2.0"
     K8S_API: $PROD_K8S_API_URL

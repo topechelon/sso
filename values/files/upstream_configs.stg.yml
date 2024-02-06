@@ -1,11 +1,11 @@
-# - service: solr
-#   default:
-#     from: solr-dev.topechelon.com
-#     to: http://bb3-solr.services:8983
-#     options:
-#       allowed_groups:
-#         - devs@topechelon.com
-#         - sysadmins@topechelon.com
+- service: solr
+  default:
+    from: solr-dev.topechelon.com
+    to: https://solr-staging.topechelon.com
+    options:
+      allowed_groups:
+        - devs@topechelon.com
+        - sysadmins@topechelon.com
 - service: sidekiq
   default:
     from: bb3api.tes-staging.topechelon.com

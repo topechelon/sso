@@ -44,8 +44,9 @@ deploy-stg:sso:
     EXTRA_HELM_FLAGS: |
       --set-string image.image=${IMAGE_PATH}:${DEPLOY_IMAGE_TAG}
   rules:
-    - if: '$CI_COMMIT_REF_NAME == "devops"'
     - when: manual
+    # - if: '$CI_COMMIT_REF_NAME == "devops"'
+
 
 ##############
 # Production #
@@ -66,6 +67,7 @@ deploy-prd:sso:
     EXTRA_HELM_FLAGS: |
       --set-string image.image=${IMAGE_PATH}:${DEPLOY_IMAGE_TAG}
   rules:
-    - if: '$CI_COMMIT_REF_NAME == "devops"'
     - when: manual
+    # - if: '$CI_COMMIT_REF_NAME == "devops"'
+
 

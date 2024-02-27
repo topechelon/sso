@@ -1,11 +1,11 @@
-- service: solr
-  default:
-    from: solr.topechelon.com
-    to: http://bb3-solr.bb3-production.svc.cluster.local:8983
-    options:
-      allowed_groups:
-        - devs@topechelon.com
-        - supportstaff@topechelon.com
+# - service: solr
+#   default:
+#     from: solr.topechelon.com
+#     to: http://bb3-solr.bb3-production.svc.cluster.local:8983
+#     options:
+#       allowed_groups:
+#         - devs@topechelon.com
+#         - supportstaff@topechelon.com
 - service: badger
   default:
     from: badger.topechelon.com

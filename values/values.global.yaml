@@ -349,13 +349,13 @@ kafka:
   extraAnnotations:
     "helm.sh/hook": pre-install
     "helm.sh/hook-weight": "1"
-  topics:
-    - name: topic-resource-name
-      partitions: 1
-      replicas: 1
-      topicName: topic_name
-      config:
-        compression.type: "producer"
+    topics: {}
+  #   - name: topic-resource-name
+  #     partitions: 1
+  #     replicas: 1
+  #     topicName: topic_name
+  #     config:
+  #       compression.type: "producer"
 
 
 ##################

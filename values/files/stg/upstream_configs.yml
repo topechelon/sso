@@ -1,0 +1,61 @@
+- service: solr
+  default:
+    from: solr-dev.topechelon.com
+    to: https://solr-staging.topechelon.com
+    options:
+      allowed_groups:
+        - devs@topechelon.com
+        - sysadmins@topechelon.com
+- service: sidekiq
+  default:
+    from: bb3api.tes-staging.topechelon.com
+    to: http://bb3-sidekiq.tes-staging:3000
+    options:
+      allowed_groups:
+        - devs@topechelon.com
+        - devs-contract@topechelon.com
+        - supportstaff@topechelon.com
+        - sysadmins@topechelon.com
+- service: kafka-ui
+  default:
+    from: kafka-ui-dev.topechelon.com
+    to: http://kafka-ui.tes-staging:9000
+    options:
+      allowed_groups:
+        - devs@topechelon.com
+        - sysadmins@topechelon.com
+- service: tam-mailhog
+  default:
+    from: tam-mailhog.topechelon.com
+    to: http://mailhog.tam
+    options:
+      allowed_groups:
+        - devs@topechelon.com
+        - tam@topechelon.com
+        - tamsales@topechelon.com
+- service: elk
+  default:
+    from: elk-dev.topechelon.com
+    to: https://vpc-bigbiller-qr7xnvgjmk4xtknrlhslru2e2u.us-east-1.es.amazonaws.com
+    options:
+      allowed_groups:
+        - devs@topechelon.com
+        - sysadmins@topechelon.com
+# - service: grafana
+#   default:
+#     from: grafana-dev.topechelon.com
+#     to: http://prometheus-stack-grafana.monitoring
+#     options:
+#       allowed_groups:
+#         - devs@topechelon.com
+#         - sysadmins@topechelon.com
+#         - intelletive-team@topechelon.com
+# - service: prometheus
+#   default:
+#     from: prometheus-dev.topechelon.com
+#     to: http://prometheus-stack-kube-prom-prometheus.monitoring:9090
+#     options:
+#       allowed_groups:
+#         - devs@topechelon.com
+#         - sysadmins@topechelon.com
+#         - intelletive-team@topechelon.com

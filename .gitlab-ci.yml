@@ -1,0 +1,73 @@
+# include pipeline templates
+include:
+  - project: devops/standard-pipeline-templates
+    ref: change-helm-deploy
+    file: index.yml
+
+variables:
+  # ENABLE/DISABLE STAGES #
+  CONTAINER_BUILD:             "disable"
+  HELM_DEPLOY:                 "enable"
+  STANDARD_HELM_CHART_VERSION: 1.0.37
+
+  # GLOBAL (ALL JOBS/ENVIRONMENTS) #
+  IMAGE_PATH:                   ""
+  EXTRA_BUILD_FLAGS:            ""
+
+#########
+# BUILD #
+#########
+# build:main:
+#   extends: container-build-commit
+#   rules:
+#     - if: '$CI_MERGE_REQUEST_ID && $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "devops"'
+#   variables:
+#     IMAGE_PATH: sso
+
+###########
+# STAGING #
+###########
+
+deploy-stg:sso:
+  extends: .helm-deploy-dev
+  environment: stg
+  variables:
+    SERVICE_NAME: sso-proxy
+    DEPLOY_NAMESPACE: tes-staging
+    VALUES_PATH: values/values.stg.yaml
+    IMAGE_PATH: "public.ecr.aws/topechelon/sso"
+    DEPLOY_IMAGE_TAG: "v1.2.0"
+    K8S_API: $STAGING_K8S_API_URL
+    K8S_CA: $STAGING_K8S_CA_BASE64
+    K8S_TOKEN: $STAGING_K8S_TOKEN_BASE64
+    HELM_PRE_UPDATE_HOOK: cp -r values/files standard-helm-chart/
+    EXTRA_HELM_FLAGS: |
+      --set-string image.image=${IMAGE_PATH}:${DEPLOY_IMAGE_TAG}
+  rules:
+    - when: manual
+    # - if: '$CI_COMMIT_REF_NAME == "devops"'
+
+
+##############
+# Production #
+##############
+deploy-prd:sso:
+  extends: .helm-deploy-prod
+  environment: prod
+  variables:
+    SERVICE_NAME: sso-proxy
+    DEPLOY_NAMESPACE: bigbiller-prod
+    VALUES_PATH: values/values.prd.yaml
+    IMAGE_PATH: "public.ecr.aws/topechelon/sso"
+    DEPLOY_IMAGE_TAG: "v1.2.0"
+    K8S_API: $PROD_K8S_API_URL
+    K8S_CA: $PROD_K8S_CA_BASE64
+    K8S_TOKEN: $PROD_K8S_TOKEN_BASE64
+    HELM_PRE_UPDATE_HOOK: cp -r values/files standard-helm-chart/
+    EXTRA_HELM_FLAGS: |
+      --set-string image.image=${IMAGE_PATH}:${DEPLOY_IMAGE_TAG}
+  rules:
+    - when: manual
+    # - if: '$CI_COMMIT_REF_NAME == "devops"'
+
+

@@ -224,7 +224,7 @@ extraVirtualService:
   virtualServices:
   - name: bb3api-sso-proxy-redirect
     gateways:
-    - istio-system/tes-staging-internal
+    - istio-system/main-tes-staging-internal
     hosts:
     - bb3apistaging.topechelon.com
     paths:

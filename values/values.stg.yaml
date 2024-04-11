@@ -194,7 +194,7 @@ istio:
   gateways:
     - "istio-system/main-tes-staging-external"
   hosts: 
-    - bb3apistaging.topechelon.com
+    #- bb3apistaging.topechelon.com
     - tam-mailhog.topechelon.com
     - kafka-ui-dev.topechelon.com
     - elk-dev.topechelon.com

@@ -8,7 +8,7 @@
         - sysadmins@topechelon.com
 - service: sidekiq
   default:
-    from: bb3api.tes-staging.topechelon.com
+    from: bb3apistaging.topechelon.com
     to: http://bb3-sidekiq.tes-staging:3000
     options:
       allowed_groups:

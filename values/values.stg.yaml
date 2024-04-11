@@ -192,9 +192,9 @@ k8sIngress:
 istio:
   enabled: true
   gateways:
-    - "istio-system/tes-staging-internal"
+    - "istio-system/main-tes-staging-external"
   hosts: 
-    - bb3api.tes-staging.topechelon.com
+    - bb3apistaging.topechelon.com
     - tam-mailhog.topechelon.com
     - kafka-ui-dev.topechelon.com
     - elk-dev.topechelon.com
@@ -224,9 +224,9 @@ extraVirtualService:
   virtualServices:
   - name: bb3api-sso-proxy-redirect
     gateways:
-    - istio-system/tes-staging-internal
+    - istio-system/main-tes-staging-external
     hosts:
-    - bb3api.tes-staging.topechelon.com
+    - bb3apistaging.topechelon.com
     paths:
     - /oauth2
     - /sidekiq_ui
